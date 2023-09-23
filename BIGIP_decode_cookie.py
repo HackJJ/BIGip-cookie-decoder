@@ -1,28 +1,56 @@
-#!/usr/bin/python
-
-# example string: BIGip<ervername>110536896.20480.0000
-
 import struct
 import sys
 import re
 
+def decode_cookie(cookie):
+    try:
+        # Split the cookie into name and value
+        cookie_name, cookie_value = cookie.split('=')
+    except ValueError:
+        print("Error: Invalid cookie format. Expected format is 'name=value'")
+        return
+
+    # Search for the pool name in the cookie name
+    pool = re.search(r'^BIGipServer([.\w\.]*)', cookie_name)
+    if pool is None:
+        print("Error: Invalid cookie name. Expected name to start with 'BIGipServer'")
+        return
+
+    try:
+        # Split the cookie value into host, port, and end values
+        host, port, end = cookie_value.split('.')
+    except ValueError:
+        print("Error: Invalid cookie value format. Expected format is 'host.port.end'")
+        return
+
+    try:
+        # Decode the host value
+        a, b, c, d = [i for i in struct.pack("<I", int(host))]
+    except struct.error:
+        print("Error: Failed to decode the host value.")
+        return
+
+    try:
+        # Decode the port value
+        e = [i for i in struct.pack("<H", int(port))]
+    except struct.error:
+        print("Error: Failed to decode the port value.")
+        return
+
+    port = f"0x{e[0]:02X}{e[1]:02X}"
+
+    # Print the decoded information
+    print(f"[*] Pool name: {pool.group(1)}")
+    print(f"[*] Decoded IP and Port: {a}.{b}.{c}.{d}:{int(port, 16)}\n")
+
+# Check if the correct number of arguments are provided
 if len(sys.argv) != 2:
-    print "Usage: %s cookie" % sys.argv[0]
+    print(f"Usage: {sys.argv[0]} cookie")
     exit(1)
 
+# Extract the cookie value from the command line argument
 cookie = sys.argv[1]
-print "\n[*] Cookie to decode: %s\n" % cookie
+print(f"\n[*] Cookie to decode: {cookie}\n")
 
-(cookie_name, cookie_value) = cookie.split('=')
-
-pool = re.search('^BIGipServer([.\w\.]*)', cookie_name)
-
-(host, port, end) = cookie_value.split('.')
-
-(a, b, c, d) = [ord(i) for i in struct.pack("<I", int(host))]
-
-(e) = [ord(e) for e in struct.pack("<H", int(port))]
-port = "0x%02X%02X" % (e[0],e[1])
-
-print "[*] Pool name: %s" % (pool.group(1))
-print "[*] Decoded IP and Port: %s.%s.%s.%s:%s\n" % (a,b,c,d, int(port,16))
+# Decode the cookie
+decode_cookie(cookie)
