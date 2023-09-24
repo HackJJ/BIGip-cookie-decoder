@@ -43,14 +43,41 @@ def decode_cookie(cookie):
     print(f"[*] Pool name: {pool.group(1)}")
     print(f"[*] Decoded IP and Port: {a}.{b}.{c}.{d}:{int(port, 16)}\n")
 
+def encode_to_cookie(ip_port):
+    try:
+        ip, port_str = ip_port.split(':')
+        a, b, c, d = [int(i) for i in ip.split('.')]
+        port = int(port_str)
+        if port < 0 or port > 65535:
+            raise ValueError
+    except ValueError:
+        print("Error: Invalid IP:Port format. Expected format is 'x.x.x.x:yyyy' where yyyy is between 0 and 65535.")
+        return
+
+    host = struct.unpack("<I", bytes([a, b, c, d]))[0]
+    port = struct.unpack("<H", bytes([port // 256, port % 256]))[0]
+
+    # Prompt for the pool name
+    pool_name = input("Enter the pool name: ")
+
+    # Construct the cookie value
+    cookie_value = f"{host}.{port}.0000"
+    print(f"[*] Encoded Cookie: BIGipServer{pool_name}={cookie_value}\n")
+
 # Check if the correct number of arguments are provided
-if len(sys.argv) != 2:
-    print(f"Usage: {sys.argv[0]} cookie")
+if len(sys.argv) not in [2, 3]:
+    print(f"Usage: {sys.argv[0]} cookie OR {sys.argv[0]} x.x.x.x yyyy")
     exit(1)
 
-# Extract the cookie value from the command line argument
-cookie = sys.argv[1]
-print(f"\n[*] Cookie to decode: {cookie}\n")
-
-# Decode the cookie
-decode_cookie(cookie)
+if len(sys.argv) == 2:
+    # Extract the cookie value from the command line argument
+    cookie = sys.argv[1]
+    print(f"\n[*] Cookie to decode: {cookie}\n")
+    # Decode the cookie
+    decode_cookie(cookie)
+elif len(sys.argv) == 3:
+    # Extract the IP and port from the command line arguments
+    ip_port = f"{sys.argv[1]}:{sys.argv[2]}"
+    print(f"\n[*] IP:Port to encode: {ip_port}\n")
+    # Encode the IP and port to cookie
+    encode_to_cookie(ip_port)
